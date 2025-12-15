@@ -193,3 +193,13 @@ Se incluye un `Makefile` para simplificar la operación:
 <p align="center">
   <img src="assets/consulta_saldo_error_429.png" alt="Rate Limit Error" width="800"/>
 </p>
+
+**Prueba en Terminal - Exitoso:**
+<p align="center">
+  <img src="assets/exitoso_terminal.png" alt="Terminal Success" width="800"/>
+</p>
+
+**Prueba en Terminal - Rate Limit:**
+<p align="center">
+  <img src="assets/rate_limit_terminal.png" alt="Terminal Rate Limit" width="800"/>
+</p>
