@@ -52,10 +52,16 @@ Este script:
 
 ### Paso 2: Configuración de Secretos (Simulación)
 En un entorno real, **NUNCA** subas secretos al repositorio.
-- **GitHub Actions**: Configura `GITHUB_TOKEN` (automático) para acceder a GHCR.
-- **ArgoCD**: Si el repositorio es privado, necesitas crear un secret en K8s con las credenciales de Git o configurar el repositorio en la UI de ArgoCD.
 
-Para este desafío, si usas un repo público, no necesitas configuración extra en ArgoCD.
+- **GitHub Actions**: Configura `GITHUB_TOKEN` (automático) para acceder a GHCR.
+- **ArgoCD (Repositorio Privado)**:
+  Si tu repositorio es privado, ArgoCD necesita credenciales para leer los manifiestos.
+  1. Edita el archivo `k8s/repo-secret.yaml` con tu usuario y Personal Access Token (PAT).
+  2. Aplícalo en el clúster (¡No hagas commit de este archivo con credenciales reales!):
+     ```bash
+     kubectl apply -f k8s/repo-secret.yaml
+     ```
+  *Alternativamente, puedes configurar el repositorio desde la UI de ArgoCD en Settings > Repositories.*
 
 ### Paso 3: Despliegue de la Aplicación (GitOps)
 1. Asegúrate de que el archivo `k8s/argocd-app.yaml` apunte a TU repositorio de GitHub.
@@ -70,28 +76,21 @@ kubectl apply -f k8s/argocd-app.yaml
      ```bash
      kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
      ```
-   - Port-forward:
-     ```bash
-     kubectl port-forward svc/argocd-server -n argocd 8080:443
-     ```
-   - Abre https://localhost:8080 (User: `admin`).
+   - Abre **https://localhost:8443** (User: `admin`).
+   - *Nota: El servicio está expuesto como LoadBalancer en el puerto 8443.*
 
 ### Paso 4: Acceso a la API y Rate Limiting
-Haz port-forward al proxy de Kong para acceder a la API:
-
-```bash
-kubectl port-forward -n kong svc/kong-proxy 8000:80
-```
+La API está expuesta en el puerto 80 estándar de tu localhost gracias a Kong.
 
 **Prueba de éxito (200 OK):**
 ```bash
-curl -i http://localhost:8000/saldo
+curl -i http://localhost/saldo
 ```
 
 **Prueba de Rate Limiting (429 Too Many Requests):**
 La política está configurada a 5 requests por minuto.
 ```bash
-for i in {1..10}; do curl -I http://localhost:8000/saldo; echo ""; done
+for i in {1..10}; do curl -I http://localhost/saldo; echo ""; done
 ```
 Deberías ver respuestas `HTTP/1.1 429 Too Many Requests` después de la 5ta petición.
 

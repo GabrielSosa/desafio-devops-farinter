@@ -1,0 +1,29 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: rate-limit-5pm
+  namespace: default
+config: 
+  minute: 5
+  policy: local
+plugin: rate-limiting
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: saldo-api-ingress
+  namespace: default
+  annotations:
+    konghq.com/plugins: rate-limit-5pm
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      - path: /saldo
+        pathType: Prefix
+        backend:
+          service:
+            name: saldo-api
+            port:
+              number: 80

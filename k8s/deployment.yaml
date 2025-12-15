@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saldo-api
+  namespace: default
+  labels:
+    app: saldo-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: saldo-api
+  template:
+    metadata:
+      labels:
+        app: saldo-api
+    spec:
+      containers:
+      - name: saldo-api
+        # En un entorno real, este tag se actualiza via CI/CD (ej. kustomize edit set image)
+        image: ghcr.io/gabrielsosa/desafio-devops-farinter:latest 
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
