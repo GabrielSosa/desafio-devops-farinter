@@ -114,6 +114,23 @@ En este ejemplo, el manifiesto `k8s/app/deployment.yaml` usa `latest` o un tag f
 1. **CI Push to Git**: El pipeline de CI, tras construir la imagen `app:sha-123`, hace un commit al repo de configuración actualizando el tag en `deployment.yaml` (o `kustomization.yaml`).
 2. **ArgoCD Image Updater**: Un componente adicional que monitorea el registry y actualiza automáticamente la aplicación en ArgoCD cuando detecta una nueva imagen.
 
+## 5. Gestión de Secretos en Producción
+
+En este desafío, utilizamos un enfoque **imperativo** mediante scripts locales (`scripts/setup_secrets.sh`) que leen de un archivo `.env` y crean los `Kubernetes Secrets` directamente en el clúster. Esto es válido para entornos de desarrollo, demos o pruebas locales donde se busca simplicidad.
+
+Sin embargo, en un entorno de **Producción** bajo la filosofía GitOps, se recomiendan enfoques más robustos y declarativos:
+
+1.  **External Secrets Operator (ESO)**:
+    *   Permite sincronizar secretos desde proveedores externos como **AWS Secrets Manager**, **Azure Key Vault**, **Google Secret Manager** o **HashiCorp Vault**.
+    *   ArgoCD gestiona un recurso `ExternalSecret` (seguro de commitear) que referencia al secreto en la nube.
+
+2.  **Bitnami Sealed Secrets**:
+    *   Permite cifrar los secretos en el lado del cliente (developer) y subir el archivo cifrado (`SealedSecret`) al repositorio Git.
+    *   Un controlador en el clúster descifra el secreto y crea el `Secret` nativo de Kubernetes.
+
+3.  **ArgoCD Vault Plugin**:
+    *   Inyecta los secretos en tiempo de despliegue (renderizado) obteniéndolos directamente de una bóveda segura.
+
 ## 6. Requisitos Opcionales Implementados
 
 ### TLS (Cert-Manager)
