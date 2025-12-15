@@ -12,7 +12,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Necesario para hacer push al repo
+      contents: write
       packages: write
 
     steps:
@@ -67,9 +67,28 @@ jobs:
         # Obtener el short SHA del commit actual
         SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
         
-        # Actualizar el tag en kustomization.yaml
+        # Determinar ambiente basado en la rama
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENV="production"
+          LOG_LEVEL="info"
+          REPLICAS=3
+        else
+          ENV="development"
+          LOG_LEVEL="debug"
+          REPLICAS=1
+        fi
+        
         cd k8s
+        
+        # 1. Actualizar imagen
         ../kustomize edit set image ghcr.io/${{ github.repository }}=ghcr.io/${{ github.repository }}:sha-${SHORT_SHA}
+        
+        # 2. Actualizar ConfigMap (Variables de entorno)
+        # Usamos sed para reemplazar valores en kustomization.yaml porque kustomize edit no soporta configmaps literals bien
+        # Nota: En un entorno real, usaríamos 'kustomize edit add configmap' limpiando el anterior, o overlays.
+        # Aquí simplificamos reemplazando los valores por defecto.
+        sed -i "s/ENVIRONMENT=\"default\"/ENVIRONMENT=\"$ENV\"/g" kustomization.yaml
+        sed -i "s/LOG_LEVEL=\"info\"/LOG_LEVEL=\"$LOG_LEVEL\"/g" kustomization.yaml
         
         # Configurar Git
         git config --global user.name "GitHub Actions"
@@ -77,5 +96,5 @@ jobs:
         
         # Commit y Push
         git add kustomization.yaml
-        git commit -m "ci: update image tag to sha-${SHORT_SHA}"
+        git commit -m "ci: update image to sha-${SHORT_SHA} and env to $ENV"
         git push

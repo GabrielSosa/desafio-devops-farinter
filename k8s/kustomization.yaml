@@ -11,8 +11,24 @@ resources:
 - consumer.yaml
 
 images:
-- name: ghcr.io/GabrielSosa/desafio-devops-farinter
-  newName: ghcr.io/GabrielSosa/desafio-devops-farinter
-  newTag: sha-fe98e59
 - name: ghcr.io/gabrielsosa/desafio-devops-farinter
-  newTag: latest
+  newTag: latest # Actualizado por CI
+
+# Configuración dinámica inyectada por CI/CD
+# El pipeline generará un patch para modificar esto según la rama
+configMapGenerator:
+- name: app-config
+  literals:
+  - ENVIRONMENT="default"
+  - LOG_LEVEL="info"
+
+patches:
+- target:
+    kind: Deployment
+    name: saldo-api
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom
+      value:
+      - configMapRef:
+          name: app-config

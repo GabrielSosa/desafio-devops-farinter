@@ -130,16 +130,21 @@ Se utiliza el plugin `key-auth` de Kong.
   curl -k -H "apikey: super-secret-key" https://localhost/saldo
   ```
 
-### Gestión de Manifiestos (Kustomize)
-Se ha migrado a Kustomize para gestionar los entornos y tags de imágenes.
-- Archivo principal: `k8s/kustomization.yaml`.
+### Gestión de Manifiestos (Kustomize Simplificado)
+Se utiliza una estructura plana en `k8s/` con un solo `kustomization.yaml`.
+La diferenciación de entornos se maneja dinámicamente en el pipeline de CI:
+- Si la rama es `main` -> Configura variables de **Producción**.
+- Si es otra rama -> Configura variables de **Desarrollo**.
+
+El pipeline inyecta estas variables en un `ConfigMap` dentro de `kustomization.yaml` antes de hacer commit.
 
 ### Automatización CI/GitOps
-El pipeline de GitHub Actions ahora actualiza automáticamente el tag de la imagen en el repositorio:
-1. Construye la imagen `sha-xyz`.
-2. Ejecuta `kustomize edit set image ...`.
-3. Hace commit y push de `k8s/kustomization.yaml` al repo.
-4. ArgoCD detecta el cambio y despliega la nueva versión automáticamente.
+El pipeline de GitHub Actions:
+1. Construye la imagen.
+2. Detecta la rama.
+3. Edita `k8s/kustomization.yaml` con el nuevo tag de imagen y las variables de entorno correspondientes.
+4. Hace commit y push.
+5. ArgoCD sincroniza el cambio.
 
 ### Makefile
 Se incluye un `Makefile` para simplificar la operación:
