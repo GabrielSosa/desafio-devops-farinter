@@ -79,6 +79,8 @@ SECRET
 # ==============================================================================
 
 echo "🔑 Configurando API Key para Kong..."
+kubectl create secret generic app-consumer-apikey \
+    --from-literal=kongCredType=key-auth \
     --from-literal=key=$API_KEY \
     --dry-run=client -o yaml | kubectl apply -f -
 
