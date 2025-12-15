@@ -50,23 +50,24 @@ Este script:
 2. Instala Kong Ingress Controller (DB-less) en el namespace `kong`.
 3. Espera a que los servicios estén listos.
 
-### Paso 2: Configuración de Secretos (Simulación)
-En un entorno real, **NUNCA** subas secretos al repositorio.
+### Paso 2: Configuración de Secretos
+Para gestionar las credenciales de forma segura (GHCR, Git, API Keys), hemos centralizado todo en un único script que lee de un archivo `.env`.
 
-- **GitHub Actions**: Configura `GITHUB_TOKEN` (automático) para acceder a GHCR.
-- **ArgoCD (Repositorio Privado)**:
-  Si tu repositorio es privado, ArgoCD necesita credenciales para leer los manifiestos.
-  1. Edita el archivo `k8s/repo-secret.yaml` con tu usuario y Personal Access Token (PAT).
-  2. Aplícalo en el clúster (¡No hagas commit de este archivo con credenciales reales!):
-     ```bash
-     kubectl apply -f k8s/repo-secret.yaml
-     ```
-- **Kubernetes (Pull Image)**:
-  Para que el clúster pueda descargar la imagen desde GHCR (que es privado por defecto), necesitas crear un secreto:
-  ```bash
-  ./scripts/create_docker_secret.sh
-  ```
-  *Te pedirá tu usuario y PAT con permisos `read:packages`.*
+1. Copia el ejemplo y configura tus credenciales:
+   ```bash
+   cp .env.example .env
+   # Edita .env con tu GITHUB_USER, GITHUB_PAT, etc.
+   ```
+
+2. Ejecuta el script de configuración de secretos:
+   ```bash
+   ./scripts/setup_secrets.sh
+   ```
+
+Este script configurará automáticamente:
+- **ghcr-secret**: Para descargar imágenes privadas.
+- **private-repo-creds**: Para que ArgoCD acceda a tu repo.
+- **app-consumer-apikey**: La API Key para Kong.
 
 ### Paso 3: Despliegue de la Aplicación (GitOps)
 1. Asegúrate de que el archivo `k8s/argocd-app.yaml` apunte a TU repositorio de GitHub.
@@ -108,7 +109,7 @@ Deberías ver respuestas `HTTP/1.1 429 Too Many Requests` después de la 5ta pet
 - **Kong DB-less**: Para un entorno GitOps puro, el modo DB-less es ideal ya que la configuración se inyecta vía CRDs (KongPlugin, Ingress) y no requiere una base de datos Postgres separada.
 
 ## 4. Manejo de Tags de Imagen en GitOps
-En este ejemplo, el manifiesto `k8s/deployment.yaml` usa `latest` o un tag fijo para simplicidad. En un entorno productivo real, existen dos estrategias principales:
+En este ejemplo, el manifiesto `k8s/app/deployment.yaml` usa `latest` o un tag fijo para simplicidad. En un entorno productivo real, existen dos estrategias principales:
 
 1. **CI Push to Git**: El pipeline de CI, tras construir la imagen `app:sha-123`, hace un commit al repo de configuración actualizando el tag en `deployment.yaml` (o `kustomization.yaml`).
 2. **ArgoCD Image Updater**: Un componente adicional que monitorea el registry y actualiza automáticamente la aplicación en ArgoCD cuando detecta una nueva imagen.
@@ -117,21 +118,21 @@ En este ejemplo, el manifiesto `k8s/deployment.yaml` usa `latest` o un tag fijo 
 
 ### TLS (Cert-Manager)
 Se utiliza `cert-manager` para emitir certificados autofirmados.
-- **Issuer**: `k8s/tls-issuer.yaml` (SelfSigned).
+- **Issuer**: `k8s/kong/tls-issuer.yaml` (SelfSigned).
 - **Ingress**: Configurado con `tls` y `cert-manager.io/cluster-issuer`.
 - **Acceso**: Ahora la API responde en `https://localhost/saldo` (acepta el certificado inseguro).
 
 ### Autenticación (API Key)
 Se utiliza el plugin `key-auth` de Kong.
-- **Plugin**: `k8s/auth-plugin.yaml`.
-- **Consumer**: `k8s/consumer.yaml` (Usuario: `app-consumer`, Key: `super-secret-key`).
+- **Plugin**: `k8s/kong/auth-plugin.yaml`.
+- **Consumer**: `k8s/kong/consumer.yaml` (Usuario: `app-consumer`, Key: `super-secret-key`).
 - **Prueba**:
   ```bash
   curl -k -H "apikey: super-secret-key" https://localhost/saldo
   ```
 
 ### Gestión de Manifiestos (Kustomize Simplificado)
-Se utiliza una estructura plana en `k8s/` con un solo `kustomization.yaml`.
+Se utiliza una estructura organizada en `k8s/` con un solo `kustomization.yaml` que orquesta los recursos en `k8s/app/` y `k8s/kong/`.
 La diferenciación de entornos se maneja dinámicamente en el pipeline de CI:
 - Si la rama es `main` -> Configura variables de **Producción**.
 - Si es otra rama -> Configura variables de **Desarrollo**.

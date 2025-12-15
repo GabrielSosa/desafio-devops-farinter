@@ -4,8 +4,7 @@ setup:
 	@echo "🚀 Configurando clúster..."
 	./scripts/setup_cluster.sh
 	./scripts/setup_extras.sh
-	./scripts/create_docker_secret.sh
-	./scripts/create_argocd_secret.sh
+	./scripts/setup_secrets.sh
 
 deploy:
 	@echo "📦 Desplegando aplicación..."

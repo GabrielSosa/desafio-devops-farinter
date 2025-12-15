@@ -8,12 +8,3 @@ metadata:
 username: app-consumer
 credentials:
 - app-consumer-apikey
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: app-consumer-apikey
-  namespace: default
-stringData:
-  kongCredType: key-auth
-  key: "super-secret-key"
