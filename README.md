@@ -1,0 +1,117 @@
+# Desafío DevOps - Micro-API de Saldo
+
+Este repositorio contiene la implementación de referencia para el desafío técnico de DevOps. Implementa un flujo GitOps completo para desplegar una API de consulta de saldo en Kubernetes, expuesta a través de Kong Gateway.
+
+## 1. Arquitectura
+
+El flujo de trabajo sigue un enfoque GitOps y Zero Trust:
+
+```mermaid
+graph LR
+    Dev[Developer] -->|Commit/Push| GitHub[GitHub Repo]
+    GitHub -->|Trigger| CI[GitHub Actions]
+    CI -->|Build & Test| Docker[Build Image]
+    Docker -->|Push| GHCR[GitHub Container Registry]
+    
+    subgraph Kubernetes Cluster
+        ArgoCD[ArgoCD Controller] -->|Sync| GitHub
+        ArgoCD -->|Apply Manifests| K8s[K8s Resources]
+        
+        Client[Cliente] -->|Request| Kong[Kong Gateway]
+        Kong -->|Rate Limit & Route| Service[K8s Service]
+        Service -->|Load Balance| Pods[API Pods]
+    end
+```
+
+### Componentes:
+- **Aplicación**: Python FastAPI (ligero, rápido).
+- **Container**: Docker Multi-stage build (imagen final ~100MB), usuario no-root.
+- **CI**: GitHub Actions (Tests, Build, Push a GHCR).
+- **CD/GitOps**: ArgoCD (Sincronización automática del estado deseado).
+- **Gateway**: Kong Ingress Controller (DB-less) para exposición y Rate Limiting.
+- **Registry**: GitHub Container Registry (GHCR).
+
+## 2. How-to Reproducible
+
+### Prerrequisitos
+- Docker Desktop (con Kubernetes habilitado) o Minikube/Kind.
+- `kubectl` instalado.
+- `git` instalado.
+
+### Paso 1: Configuración del Clúster Local
+Ejecuta el script de configuración automática para instalar ArgoCD y Kong:
+
+```bash
+./scripts/setup_cluster.sh
+```
+
+Este script:
+1. Instala ArgoCD en el namespace `argocd`.
+2. Instala Kong Ingress Controller (DB-less) en el namespace `kong`.
+3. Espera a que los servicios estén listos.
+
+### Paso 2: Configuración de Secretos (Simulación)
+En un entorno real, **NUNCA** subas secretos al repositorio.
+- **GitHub Actions**: Configura `GITHUB_TOKEN` (automático) para acceder a GHCR.
+- **ArgoCD**: Si el repositorio es privado, necesitas crear un secret en K8s con las credenciales de Git o configurar el repositorio en la UI de ArgoCD.
+
+Para este desafío, si usas un repo público, no necesitas configuración extra en ArgoCD.
+
+### Paso 3: Despliegue de la Aplicación (GitOps)
+1. Asegúrate de que el archivo `k8s/argocd-app.yaml` apunte a TU repositorio de GitHub.
+2. Aplica el manifiesto de la aplicación:
+
+```bash
+kubectl apply -f k8s/argocd-app.yaml
+```
+
+3. Accede a la UI de ArgoCD para verificar el estado:
+   - Obtén la password:
+     ```bash
+     kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+     ```
+   - Port-forward:
+     ```bash
+     kubectl port-forward svc/argocd-server -n argocd 8080:443
+     ```
+   - Abre https://localhost:8080 (User: `admin`).
+
+### Paso 4: Acceso a la API y Rate Limiting
+Haz port-forward al proxy de Kong para acceder a la API:
+
+```bash
+kubectl port-forward -n kong svc/kong-proxy 8000:80
+```
+
+**Prueba de éxito (200 OK):**
+```bash
+curl -i http://localhost:8000/saldo
+```
+
+**Prueba de Rate Limiting (429 Too Many Requests):**
+La política está configurada a 5 requests por minuto.
+```bash
+for i in {1..10}; do curl -I http://localhost:8000/saldo; echo ""; done
+```
+Deberías ver respuestas `HTTP/1.1 429 Too Many Requests` después de la 5ta petición.
+
+## 3. Decisiones Técnicas
+
+- **Lenguaje (Python/FastAPI)**: Elegido por su simplicidad y rapidez para crear APIs RESTful.
+- **Imagen Base (python:3.11-slim)**: Balance ideal entre tamaño y compatibilidad. Alpine a veces da problemas con dependencias de Python (wheels).
+- **Seguridad (Non-root)**: Se crea un usuario `appuser` (UID 1001) para ejecutar el proceso, mitigando riesgos de escalada de privilegios.
+- **HPA**: Configurado para escalar si la CPU supera el 50%. Se definen `requests` y `limits` en el Deployment para permitir que el HPA calcule el porcentaje.
+- **Kong DB-less**: Para un entorno GitOps puro, el modo DB-less es ideal ya que la configuración se inyecta vía CRDs (KongPlugin, Ingress) y no requiere una base de datos Postgres separada.
+
+## 4. Manejo de Tags de Imagen en GitOps
+En este ejemplo, el manifiesto `k8s/deployment.yaml` usa `latest` o un tag fijo para simplicidad. En un entorno productivo real, existen dos estrategias principales:
+
+1. **CI Push to Git**: El pipeline de CI, tras construir la imagen `app:sha-123`, hace un commit al repo de configuración actualizando el tag en `deployment.yaml` (o `kustomization.yaml`).
+2. **ArgoCD Image Updater**: Un componente adicional que monitorea el registry y actualiza automáticamente la aplicación en ArgoCD cuando detecta una nueva imagen.
+
+## 5. Evidencias
+
+*(Espacio reservado para screenshots del usuario)*
+- GitHub Actions Pipeline: [Insertar imagen]
+- ArgoCD Synced: [Insertar imagen]
+- Rate Limiting Output: [Insertar output de consola]
