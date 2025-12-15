@@ -13,7 +13,7 @@ resources:
 images:
 - name: ghcr.io/GabrielSosa/desafio-devops-farinter
   newName: ghcr.io/GabrielSosa/desafio-devops-farinter
-  newTag: sha-a533c31
+  newTag: sha-b1d646c
 - name: ghcr.io/gabrielsosa/desafio-devops-farinter
   newTag: latest
 
