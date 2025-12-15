@@ -154,7 +154,24 @@ Se incluye un `Makefile` para simplificar la operación:
 
 ## 7. Evidencias
 
-*(Espacio reservado para screenshots del usuario)*
-- GitHub Actions Pipeline: [Insertar imagen]
-- ArgoCD Synced: [Insertar imagen]
-- Rate Limiting Output: [Insertar output de consola]
+### GitHub Actions Pipeline
+<p align="center">
+  <img src="assets/ci.png" alt="GitHub Actions Pipeline" width="800"/>
+</p>
+
+### ArgoCD Synced
+<p align="center">
+  <img src="assets/argo.png" alt="ArgoCD Synced" width="800"/>
+</p>
+
+### Rate Limiting
+
+**Caso Exitoso (200 OK):**
+<p align="center">
+  <img src="assets/consulta_saldo_exito.png" alt="Rate Limit Success" width="800"/>
+</p>
+
+**Caso Bloqueado (429 Too Many Requests):**
+<p align="center">
+  <img src="assets/consulta_saldo_error_429.png" alt="Rate Limit Error" width="800"/>
+</p>
