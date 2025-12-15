@@ -113,7 +113,41 @@ En este ejemplo, el manifiesto `k8s/deployment.yaml` usa `latest` o un tag fijo 
 1. **CI Push to Git**: El pipeline de CI, tras construir la imagen `app:sha-123`, hace un commit al repo de configuración actualizando el tag en `deployment.yaml` (o `kustomization.yaml`).
 2. **ArgoCD Image Updater**: Un componente adicional que monitorea el registry y actualiza automáticamente la aplicación en ArgoCD cuando detecta una nueva imagen.
 
-## 5. Evidencias
+## 6. Requisitos Opcionales Implementados
+
+### TLS (Cert-Manager)
+Se utiliza `cert-manager` para emitir certificados autofirmados.
+- **Issuer**: `k8s/tls-issuer.yaml` (SelfSigned).
+- **Ingress**: Configurado con `tls` y `cert-manager.io/cluster-issuer`.
+- **Acceso**: Ahora la API responde en `https://localhost/saldo` (acepta el certificado inseguro).
+
+### Autenticación (API Key)
+Se utiliza el plugin `key-auth` de Kong.
+- **Plugin**: `k8s/auth-plugin.yaml`.
+- **Consumer**: `k8s/consumer.yaml` (Usuario: `app-consumer`, Key: `super-secret-key`).
+- **Prueba**:
+  ```bash
+  curl -k -H "apikey: super-secret-key" https://localhost/saldo
+  ```
+
+### Gestión de Manifiestos (Kustomize)
+Se ha migrado a Kustomize para gestionar los entornos y tags de imágenes.
+- Archivo principal: `k8s/kustomization.yaml`.
+
+### Automatización CI/GitOps
+El pipeline de GitHub Actions ahora actualiza automáticamente el tag de la imagen en el repositorio:
+1. Construye la imagen `sha-xyz`.
+2. Ejecuta `kustomize edit set image ...`.
+3. Hace commit y push de `k8s/kustomization.yaml` al repo.
+4. ArgoCD detecta el cambio y despliega la nueva versión automáticamente.
+
+### Makefile
+Se incluye un `Makefile` para simplificar la operación:
+- `make setup`: Instala todo (Cluster, ArgoCD, Kong, Cert-Manager, Secretos).
+- `make deploy`: Aplica la App en ArgoCD.
+- `make test`: Ejecuta pruebas de conectividad y auth.
+
+## 7. Evidencias
 
 *(Espacio reservado para screenshots del usuario)*
 - GitHub Actions Pipeline: [Insertar imagen]

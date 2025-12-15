@@ -56,3 +56,26 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Update Kubernetes resources
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Instalar Kustomize
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+        
+        # Obtener el short SHA del commit actual
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+        
+        # Actualizar el tag en kustomization.yaml
+        cd k8s
+        ../kustomize edit set image ghcr.io/${{ github.repository }}=ghcr.io/${{ github.repository }}:sha-${SHORT_SHA}
+        
+        # Configurar Git
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        
+        # Commit y Push
+        git add kustomization.yaml
+        git commit -m "ci: update image tag to sha-${SHORT_SHA}"
+        git push

@@ -14,11 +14,17 @@ metadata:
   name: saldo-api-ingress
   namespace: default
   annotations:
-    konghq.com/plugins: rate-limit-5pm
+    konghq.com/plugins: rate-limit-5pm, api-key-auth
+    cert-manager.io/cluster-issuer: selfsigned-issuer
 spec:
   ingressClassName: kong
+  tls:
+  - hosts:
+    - localhost
+    secretName: saldo-api-tls
   rules:
-  - http:
+  - host: localhost
+    http:
       paths:
       - path: /saldo
         pathType: Prefix

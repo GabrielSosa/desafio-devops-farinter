@@ -1,0 +1,19 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: app-consumer
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: app-consumer
+credentials:
+- app-consumer-apikey
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-consumer-apikey
+  namespace: default
+stringData:
+  kongCredType: key-auth
+  key: "super-secret-key"
