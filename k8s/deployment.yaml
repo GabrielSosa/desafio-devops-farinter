@@ -15,6 +15,8 @@ spec:
       labels:
         app: saldo-api
     spec:
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: saldo-api
         # En un entorno real, este tag se actualiza via CI/CD (ej. kustomize edit set image)

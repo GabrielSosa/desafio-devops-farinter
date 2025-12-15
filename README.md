@@ -61,7 +61,12 @@ En un entorno real, **NUNCA** subas secretos al repositorio.
      ```bash
      kubectl apply -f k8s/repo-secret.yaml
      ```
-  *Alternativamente, puedes configurar el repositorio desde la UI de ArgoCD en Settings > Repositories.*
+- **Kubernetes (Pull Image)**:
+  Para que el clúster pueda descargar la imagen desde GHCR (que es privado por defecto), necesitas crear un secreto:
+  ```bash
+  ./scripts/create_docker_secret.sh
+  ```
+  *Te pedirá tu usuario y PAT con permisos `read:packages`.*
 
 ### Paso 3: Despliegue de la Aplicación (GitOps)
 1. Asegúrate de que el archivo `k8s/argocd-app.yaml` apunte a TU repositorio de GitHub.
