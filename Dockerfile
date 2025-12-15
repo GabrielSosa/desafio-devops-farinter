@@ -1,4 +1,4 @@
-# Stage 1: Builder
+# Etapa 1: Constructor (Builder)
 FROM python:3.11-slim as builder
 
 WORKDIR /app
@@ -6,26 +6,26 @@ WORKDIR /app
 COPY app/requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Stage 2: Runtime
+# Etapa 2: Ejecución (Runtime)
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Create a non-root user
+# Crear un usuario no-root
 RUN groupadd -r appuser && useradd -r -g appuser -u 1001 appuser
 
-# Copy installed packages from builder
+# Copiar paquetes instalados desde el builder
 COPY --from=builder /root/.local /home/appuser/.local
 COPY app/ .
 
-# Update PATH
+# Actualizar PATH
 ENV PATH=/home/appuser/.local/bin:$PATH
 
-# Switch to non-root user
+# Cambiar al usuario no-root
 USER appuser
 
-# Expose port
+# Exponer puerto
 EXPOSE 8000
 
-# Run application
+# Ejecutar aplicación
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
