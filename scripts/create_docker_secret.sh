@@ -2,6 +2,14 @@
 set -e
 
 echo "🔐 Generando secreto para GitHub Container Registry (GHCR)..."
+
+# Cargar variables desde .env si existe
+if [ -f .env ]; then
+    export $(cat .env | xargs)
+elif [ -f ../.env ]; then
+    export $(cat ../.env | xargs)
+fi
+
 # Validar variables de entorno
 if [ -z "$GITHUB_USER" ] || [ -z "$GITHUB_PAT" ]; then
     echo "❌ Error: Las variables de entorno GITHUB_USER y GITHUB_PAT no están definidas."
