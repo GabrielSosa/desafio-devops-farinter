@@ -107,31 +107,29 @@ Deberías ver respuestas `HTTP/1.1 429 Too Many Requests` después de la 5ta pet
 - **Seguridad (Non-root)**: Se crea un usuario `appuser` (UID 1001) para ejecutar el proceso, mitigando riesgos de escalada de privilegios.
 - **HPA**: Configurado para escalar si la CPU supera el 50%. Se definen `requests` y `limits` en el Deployment para permitir que el HPA calcule el porcentaje.
 - **Kong DB-less**: Para un entorno GitOps puro, el modo DB-less es ideal ya que la configuración se inyecta vía CRDs (KongPlugin, Ingress) y no requiere una base de datos Postgres separada.
+- **CI/CD (GitHub Actions + ArgoCD)**: GitHub Actions se integra nativamente para CI rápido y pruebas. ArgoCD implementa GitOps puro, asegurando que el clúster siempre refleje el estado del repositorio con auto-healing.
 
-## 4. Manejo de Tags de Imagen en GitOps
-En este ejemplo, el manifiesto `k8s/app/deployment.yaml` usa `latest` o un tag fijo para simplicidad. En un entorno productivo real, existen dos estrategias principales:
+## 4. Consideraciones para Producción (Simplificaciones vs Realidad)
 
-1. **CI Push to Git**: El pipeline de CI, tras construir la imagen `app:sha-123`, hace un commit al repo de configuración actualizando el tag en `deployment.yaml` (o `kustomization.yaml`).
-2. **ArgoCD Image Updater**: Un componente adicional que monitorea el registry y actualiza automáticamente la aplicación en ArgoCD cuando detecta una nueva imagen.
+Para este desafío se han realizado algunas simplificaciones. En un entorno productivo real, estas serían las estrategias recomendadas:
 
-## 5. Gestión de Secretos en Producción
+1.  **Gestión de Secretos**:
+    *   *Actual*: Scripts imperativos (`setup_secrets.sh`) y `.env` local.
+    *   *Producción*: **External Secrets Operator** (integrado con AWS Secrets Manager/Vault) o **Sealed Secrets** para mantener el enfoque GitOps sin exponer credenciales en el repositorio.
 
-En este desafío, utilizamos un enfoque **imperativo** mediante scripts locales (`scripts/setup_secrets.sh`) que leen de un archivo `.env` y crean los `Kubernetes Secrets` directamente en el clúster. Esto es válido para entornos de desarrollo, demos o pruebas locales donde se busca simplicidad.
+2.  **TLS y Dominios**:
+    *   *Actual*: Certificados autofirmados (`SelfSigned`) y acceso vía `localhost`.
+    *   *Producción*: **Cert-Manager** con `LetsEncrypt` (ACME) para certificados válidos automáticos y un dominio real configurado en DNS apuntando al LoadBalancer de Kong.
 
-Sin embargo, en un entorno de **Producción** bajo la filosofía GitOps, se recomiendan enfoques más robustos y declarativos:
+3.  **Persistencia y Alta Disponibilidad**:
+    *   *Actual*: Kong en modo DB-less (en memoria) y almacenamiento local.
+    *   *Producción*: Kong con base de datos (Postgres) si se requieren features dinámicas complejas, o mantener DB-less con alta disponibilidad de réplicas y almacenamiento persistente distribuido si fuera necesario.
 
-1.  **External Secrets Operator (ESO)**:
-    *   Permite sincronizar secretos desde proveedores externos como **AWS Secrets Manager**, **Azure Key Vault**, **Google Secret Manager** o **HashiCorp Vault**.
-    *   ArgoCD gestiona un recurso `ExternalSecret` (seguro de commitear) que referencia al secreto en la nube.
+4.  **Manejo de Tags de Imagen**:
+    *   *Actual*: Uso de tags fijos o `latest` para simplicidad en el deployment.
+    *   *Producción*: **ArgoCD Image Updater** para monitorear el registry y actualizar automáticamente la aplicación, o un paso de CI que haga commit del nuevo tag (`app:sha-123`) al repositorio de configuración.
 
-2.  **Bitnami Sealed Secrets**:
-    *   Permite cifrar los secretos en el lado del cliente (developer) y subir el archivo cifrado (`SealedSecret`) al repositorio Git.
-    *   Un controlador en el clúster descifra el secreto y crea el `Secret` nativo de Kubernetes.
-
-3.  **ArgoCD Vault Plugin**:
-    *   Inyecta los secretos en tiempo de despliegue (renderizado) obteniéndolos directamente de una bóveda segura.
-
-## 6. Requisitos Opcionales Implementados
+## 5. Requisitos Opcionales Implementados
 
 ### TLS (Cert-Manager)
 Se utiliza `cert-manager` para emitir certificados autofirmados.
@@ -170,7 +168,7 @@ Se incluye un `Makefile` para simplificar la operación:
 - `make deploy`: Aplica la App en ArgoCD.
 - `make test`: Ejecuta pruebas de conectividad y auth.
 
-## 7. Evidencias
+## 6. Evidencias
 
 ### GitHub Actions Pipeline
 <p align="center">
